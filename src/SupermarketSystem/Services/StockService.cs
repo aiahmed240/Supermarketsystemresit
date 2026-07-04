@@ -1,19 +1,46 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using SupermarketSystem.Data;
 using SupermarketSystem.Models;
 
 namespace SupermarketSystem.Services
 {
     public class StockService
     {
-        private readonly List<Stock> _stockItems = new();
+        private readonly SupermarketDbContext _context;
 
-        public void AddStock(Stock stock)
+        public StockService(SupermarketDbContext context)
         {
-            _stockItems.Add(stock);
+            _context = context;
         }
 
-        public List<Stock> GetAllStock()
+        public void UpdateStock(int productId, int quantityChange)
         {
-            return _stockItems;
+            var stock = _context.Stock.FirstOrDefault(s => s.ProductId == productId);
+
+            if (stock == null)
+            {
+                stock = new Stock
+                {
+                    ProductId = productId,
+                    Quantity = quantityChange
+                };
+                _context.Stock.Add(stock);
+            }
+            else
+            {
+                stock.Quantity += quantityChange;
+            }
+
+            _context.SaveChanges();
+        }
+
+        public List<Stock> GetLowStock(int threshold)
+        {
+            return _context.Stock
+                .Where(s => s.Quantity <= threshold)
+                .ToList();
         }
     }
 }
