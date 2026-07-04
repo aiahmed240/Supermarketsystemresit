@@ -1,19 +1,59 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using SupermarketSystem.Data;
 using SupermarketSystem.Models;
 
 namespace SupermarketSystem.Services
 {
     public class SaleService
     {
-        private readonly List<Sale> _sales = new();
+        private readonly SupermarketDbContext _context;
 
-        public void AddSale(Sale sale)
+        public SaleService(SupermarketDbContext context)
         {
-            _sales.Add(sale);
+            _context = context;
         }
 
-        public List<Sale> GetAllSales()
+        public void RecordSale(List<(int productId, int quantity)> items)
         {
-            return _sales;
+            decimal total = 0m;
+
+            foreach (var item in items)
+            {
+                var product = _context.Products.FirstOrDefault(p => p.ProductId == item.productId);
+                if (product != null)
+                {
+                    total += product.Price * item.quantity;
+                }
+            }
+
+            var sale = new Sale
+            {
+                Date = DateTime.Now,
+                TotalAmount = total
+            };
+
+            _context.Sales.Add(sale);
+            _context.SaveChanges();
+
+            foreach (var item in items)
+            {
+                var product = _context.Products.FirstOrDefault(p => p.ProductId == item.productId);
+                if (product == null) continue;
+
+                var saleItem = new SaleItem
+                {
+                    SaleId = sale.SaleId,
+                    ProductId = item.productId,
+                    Quantity = item.quantity,
+                    Price = product.Price
+                };
+
+                _context.SaleItems.Add(saleItem);
+            }
+
+            _context.SaveChanges();
         }
     }
 }
